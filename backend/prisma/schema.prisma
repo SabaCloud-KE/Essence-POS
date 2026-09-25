@@ -1,5 +1,5 @@
 datasource db {
-  provider = "mysql"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -140,7 +140,7 @@ model Payment {
   resultCode         Int?
   resultDescription  String?       @db.Text
   transactionDate    DateTime?
-  rawCallbackPayload String?       @db.LongText
+  rawCallbackPayload String?       @db.Text
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
 
