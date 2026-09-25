@@ -7,12 +7,15 @@ async function bootstrap() {
   const logger = new Logger('EssencePOS-Bootstrap');
   const app = await NestFactory.create(AppModule);
 
-  const allowedOrigins = process.env.CORS_ORIGIN
-    ? [process.env.CORS_ORIGIN, 'http://localhost:3000', 'http://127.0.0.1:3000']
-    : '*';
-
   app.enableCors({
-    origin: allowedOrigins,
+    origin: (origin, callback) => {
+      // Allow requests with no origin (e.g. mobile apps, curl, server-to-server)
+      if (!origin) return callback(null, true);
+
+      // Dynamically echo back requesting origin (e.g. https://essence-pos.vercel.app, localhost, previews)
+      // This satisfies the browser security requirement where origin cannot be wildcard '*' when credentials: true
+      return callback(null, true);
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
