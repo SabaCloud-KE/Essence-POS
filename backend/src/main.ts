@@ -34,7 +34,7 @@ async function bootstrap() {
   app.useGlobalFilters(new HttpExceptionFilter());
 
   const port = parseInt(process.env.PORT || '4000', 10);
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
 
   logger.log(`=======================================================`);
   logger.log(`✨ Essence Hair & Beauty Salon POS API is running ✨`);
