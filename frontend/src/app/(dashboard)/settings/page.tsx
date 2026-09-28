@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import MpesaGatewayConfig from '@/components/settings/MpesaGatewayConfig';
 import SessionTimeoutConfig from '@/components/settings/SessionTimeoutConfig';
+import Link from 'next/link';
 
 export default function SettingsPage() {
   const { user, isAdmin, refreshProfile } = useAuth();
@@ -197,12 +198,178 @@ export default function SettingsPage() {
 
   if (!isAdmin) {
     return (
-      <div className="bg-white p-8 rounded-2xl border border-cream-300 text-center max-w-md mx-auto my-12">
-        <ShieldAlert className="w-12 h-12 text-amber-500 mx-auto mb-3" />
-        <h2 className="text-lg font-bold text-obsidian-900">Administrator Access Required</h2>
-        <p className="text-xs text-gray-500 mt-1">
-          Only administrators have access to system configuration and security settings.
-        </p>
+      <div className="space-y-6 max-w-4xl mx-auto">
+        {/* Page Header */}
+        <div className="bg-white p-5 rounded-2xl border border-cream-300 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-obsidian-900 flex items-center gap-2">
+              <KeyRound className="w-6 h-6 text-gold-600" />
+              <span>Staff Profile & Security</span>
+            </h1>
+            <p className="text-xs text-gray-500 mt-1">
+              Logged in as <strong className="text-obsidian-900">{user?.name}</strong> ({user?.email}) • Staff Member
+            </p>
+          </div>
+
+          <Link
+            href="/pos"
+            className="px-4 py-2 bg-cream-100 hover:bg-gold-50 border border-cream-300 hover:border-gold-300 text-obsidian-900 hover:text-gold-700 rounded-xl text-xs font-semibold transition"
+          >
+            ← Back to POS Register
+          </Link>
+        </div>
+
+        {/* Notice */}
+        <div className="bg-amber-50/70 border border-amber-200/80 rounded-2xl p-4 text-xs text-amber-900 flex items-start gap-3">
+          <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+          <div className="leading-relaxed">
+            <span className="font-bold">Staff Portal Notice:</span> System-wide M-Pesa API credentials and salon parameters are managed by Salon Administrators. You have full control over your personal staff credentials and login password below.
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Card 1: Change Staff Password */}
+          <div className="bg-white rounded-2xl border border-cream-300 shadow-sm p-6">
+            <div className="flex items-center gap-2.5 pb-4 border-b border-cream-200 mb-4">
+              <div className="w-9 h-9 rounded-xl bg-cream-100 border border-cream-200 flex items-center justify-center">
+                <Lock className="w-5 h-5 text-gold-600" />
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-obsidian-900">Change Staff Password</h2>
+                <p className="text-[11px] text-gray-500">Update your personal account credentials</p>
+              </div>
+            </div>
+
+            {passwordSuccess && (
+              <div className="mb-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>{passwordSuccess}</span>
+              </div>
+            )}
+
+            {passwordError && (
+              <div className="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                <span>{passwordError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleChangePassword} className="space-y-3.5">
+              <div>
+                <label className="block text-xs font-semibold text-obsidian-900 mb-1">
+                  Current Password
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPasswords ? 'text' : 'password'}
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    placeholder="Enter current password"
+                    required
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-cream-300 focus:outline-none focus:ring-2 focus:ring-gold-500 pr-9 bg-cream-50 focus:bg-white"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPasswords(!showPasswords)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showPasswords ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-obsidian-900 mb-1">
+                  New Password (minimum 8 characters)
+                </label>
+                <input
+                  type={showPasswords ? 'text' : 'password'}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Enter new strong password"
+                  minLength={8}
+                  required
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-cream-300 focus:outline-none focus:ring-2 focus:ring-gold-500 bg-cream-50 focus:bg-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-obsidian-900 mb-1">
+                  Confirm New Password
+                </label>
+                <input
+                  type={showPasswords ? 'text' : 'password'}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Re-enter new password"
+                  minLength={8}
+                  required
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-cream-300 focus:outline-none focus:ring-2 focus:ring-gold-500 bg-cream-50 focus:bg-white"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={isChangingPassword}
+                className="w-full py-2.5 px-4 rounded-xl gold-gradient text-white font-bold text-xs shadow-sm hover:brightness-105 transition flex items-center justify-center gap-2 mt-2 disabled:opacity-50"
+              >
+                {isChangingPassword ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Lock className="w-4 h-4" />
+                )}
+                <span>Update Password</span>
+              </button>
+            </form>
+          </div>
+
+          {/* Card 2: Staff Account Information */}
+          <div className="bg-white rounded-2xl border border-cream-300 shadow-sm p-6 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center gap-2.5 pb-4 border-b border-cream-200 mb-4">
+                <div className="w-9 h-9 rounded-xl bg-cream-100 border border-cream-200 flex items-center justify-center">
+                  <ShieldCheck className="w-5 h-5 text-gold-600" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-obsidian-900">Account Credentials</h2>
+                  <p className="text-[11px] text-gray-500">Your profile and authorization level</p>
+                </div>
+              </div>
+
+              <div className="space-y-3 text-xs">
+                <div className="flex justify-between py-2 border-b border-cream-100">
+                  <span className="text-gray-500">Full Name</span>
+                  <span className="font-semibold text-obsidian-900">{user?.name}</span>
+                </div>
+                <div className="flex justify-between py-2 border-b border-cream-100">
+                  <span className="text-gray-500">Email Address</span>
+                  <span className="font-semibold text-obsidian-900">{user?.email}</span>
+                </div>
+                <div className="flex justify-between py-2 border-b border-cream-100">
+                  <span className="text-gray-500">System Role</span>
+                  <span className="font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 uppercase text-[10px]">
+                    {user?.role}
+                  </span>
+                </div>
+                <div className="flex justify-between py-2 border-b border-cream-100">
+                  <span className="text-gray-500">Security Status</span>
+                  <span className="font-semibold text-emerald-700 flex items-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5" /> Active & Verified
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-6">
+              <Link
+                href="/pos"
+                className="w-full py-2.5 px-4 rounded-xl bg-cream-100 hover:bg-gold-50 border border-cream-300 hover:border-gold-300 text-obsidian-900 hover:text-gold-700 font-bold text-xs transition flex items-center justify-center gap-2"
+              >
+                <span>Return to POS Terminal</span>
+              </Link>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

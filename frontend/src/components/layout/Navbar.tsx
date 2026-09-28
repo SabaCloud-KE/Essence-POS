@@ -19,13 +19,16 @@ import {
   Radio,
   Clock,
   ShieldCheck,
+  KeyRound,
 } from 'lucide-react';
+import { ChangePasswordModal } from '@/components/auth/ChangePasswordModal';
 
 export function Navbar() {
   const pathname = usePathname();
   const { user, isAdmin, logout } = useAuth();
   const { isConnected } = useSocket();
   const [timeStr, setTimeStr] = useState('');
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
 
   useEffect(() => {
     const updateTime = () => {
@@ -149,6 +152,16 @@ export function Navbar() {
               </div>
 
               <button
+                type="button"
+                onClick={() => setIsChangePasswordOpen(true)}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-gray-700 hover:text-gold-700 bg-cream-100 hover:bg-gold-50 border border-cream-300 hover:border-gold-300 rounded-lg transition font-medium"
+                title="Change Password"
+              >
+                <KeyRound className="w-3.5 h-3.5 text-gold-600" />
+                <span className="hidden sm:inline">Password</span>
+              </button>
+
+              <button
                 onClick={() => logout()}
                 className="p-2 text-gray-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
                 title="Sign out"
@@ -160,29 +173,46 @@ export function Navbar() {
         </div>
 
         {/* Mobile secondary navigation bar */}
-        <div className="lg:hidden flex items-center gap-1 overflow-x-auto py-2 border-t border-cream-200">
-          {navLinks.map((link) => {
-            if (link.adminOnly && !isAdmin) return null;
-            const Icon = link.icon;
-            const isActive = pathname === link.href;
+        <div className="lg:hidden flex items-center justify-between gap-1 overflow-x-auto py-2 border-t border-cream-200">
+          <div className="flex items-center gap-1">
+            {navLinks.map((link) => {
+              if (link.adminOnly && !isAdmin) return null;
+              const Icon = link.icon;
+              const isActive = pathname === link.href;
 
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs whitespace-nowrap ${
-                  isActive
-                    ? 'bg-gold-500 text-white font-medium'
-                    : 'text-gray-600 hover:bg-cream-100'
-                }`}
-              >
-                <Icon className="w-3 h-3" />
-                {link.label}
-              </Link>
-            );
-          })}
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs whitespace-nowrap ${
+                    isActive
+                      ? 'bg-gold-500 text-white font-medium'
+                      : 'text-gray-600 hover:bg-cream-100'
+                  }`}
+                >
+                  <Icon className="w-3 h-3" />
+                  {link.label}
+                </Link>
+              );
+            })}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setIsChangePasswordOpen(true)}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-md text-xs whitespace-nowrap text-gold-700 bg-gold-50 border border-gold-200 font-medium hover:bg-gold-100 shrink-0 ml-auto"
+            title="Change Password"
+          >
+            <KeyRound className="w-3 h-3 text-gold-600" />
+            <span>Password</span>
+          </button>
         </div>
       </div>
+
+      <ChangePasswordModal
+        isOpen={isChangePasswordOpen}
+        onClose={() => setIsChangePasswordOpen(false)}
+      />
     </header>
   );
 }
