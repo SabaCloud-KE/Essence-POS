@@ -608,7 +608,14 @@ export default function PosPage() {
                   )}
                 </h2>
                 <p className="text-xs text-gray-500">
-                  Cashier: <span className="font-semibold text-gray-700">{user?.name}</span>
+                  Cashier:{' '}
+                  <Link
+                    href="/profile"
+                    className="font-semibold text-gray-700 hover:text-gold-700 underline decoration-cream-300 hover:decoration-gold-500 underline-offset-2 transition"
+                    title="Click to view staff profile & change password"
+                  >
+                    {user?.name}
+                  </Link>
                 </p>
               </div>
               {cart.length > 0 && (

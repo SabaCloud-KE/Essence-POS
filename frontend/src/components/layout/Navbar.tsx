@@ -20,6 +20,7 @@ import {
   Clock,
   ShieldCheck,
   KeyRound,
+  User as UserIcon,
 } from 'lucide-react';
 import { ChangePasswordModal } from '@/components/auth/ChangePasswordModal';
 
@@ -129,27 +130,36 @@ export function Navbar() {
               <span>{timeStr}</span>
             </div>
 
-            {/* User Profile Pill */}
+            {/* User Profile Pill - Clicking navigates to Profile page */}
             <div className="flex items-center gap-2 pl-2 border-l border-cream-300">
-              <div className="text-right hidden sm:block">
-                <div className="text-xs font-semibold text-obsidian-900 leading-tight">
-                  {user.name}
+              <Link
+                href="/profile"
+                className="flex items-center gap-2 px-2 py-1 -my-1 rounded-xl hover:bg-cream-100 transition group cursor-pointer"
+                title="View your staff profile & change password"
+              >
+                <div className="w-8 h-8 rounded-full gold-gradient flex items-center justify-center text-white text-xs font-bold shadow-xs group-hover:brightness-105 transition shrink-0">
+                  {user.name?.charAt(0)?.toUpperCase() || 'U'}
                 </div>
-                <div className="flex items-center justify-end gap-1 text-[10px]">
-                  <span
-                    className={`font-semibold uppercase tracking-wider ${
-                      user.role === 'ADMIN' ? 'text-amber-700' : 'text-blue-700'
-                    }`}
-                  >
-                    {user.role}
-                  </span>
-                  {user.mfaEnabled && (
-                    <span title="MFA Protected">
-                      <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                <div className="text-right hidden sm:block">
+                  <div className="text-xs font-semibold text-obsidian-900 group-hover:text-gold-700 leading-tight transition">
+                    {user.name}
+                  </div>
+                  <div className="flex items-center justify-end gap-1 text-[10px]">
+                    <span
+                      className={`font-semibold uppercase tracking-wider ${
+                        user.role === 'ADMIN' ? 'text-amber-700' : 'text-blue-700'
+                      }`}
+                    >
+                      {user.role}
                     </span>
-                  )}
+                    {user.mfaEnabled && (
+                      <span title="MFA Protected">
+                        <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </div>
+              </Link>
 
               <button
                 type="button"
@@ -197,15 +207,30 @@ export function Navbar() {
             })}
           </div>
 
-          <button
-            type="button"
-            onClick={() => setIsChangePasswordOpen(true)}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-md text-xs whitespace-nowrap text-gold-700 bg-gold-50 border border-gold-200 font-medium hover:bg-gold-100 shrink-0 ml-auto"
-            title="Change Password"
-          >
-            <KeyRound className="w-3 h-3 text-gold-600" />
-            <span>Password</span>
-          </button>
+          <div className="flex items-center gap-1 shrink-0 ml-auto">
+            <Link
+              href="/profile"
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs whitespace-nowrap transition ${
+                pathname === '/profile'
+                  ? 'bg-gold-500 text-white font-semibold'
+                  : 'text-gray-700 bg-cream-100 hover:bg-gold-50 border border-cream-300'
+              }`}
+              title="Staff Profile & Security"
+            >
+              <UserIcon className="w-3 h-3 text-gold-600" />
+              <span>Profile</span>
+            </Link>
+
+            <button
+              type="button"
+              onClick={() => setIsChangePasswordOpen(true)}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-md text-xs whitespace-nowrap text-gold-700 bg-gold-50 border border-gold-200 font-medium hover:bg-gold-100"
+              title="Change Password"
+            >
+              <KeyRound className="w-3 h-3 text-gold-600" />
+              <span>Password</span>
+            </button>
+          </div>
         </div>
       </div>
 
