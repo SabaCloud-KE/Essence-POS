@@ -989,9 +989,9 @@ export default function PosPage() {
             <div className="py-4 text-center font-mono print-only" id="printable-receipt">
               <div className="flex justify-center mb-2">
                 <img
-                  src="/logo.jpg"
+                  src="/logo_emblem.png"
                   alt="Essence Salon"
-                  className="w-14 h-14 rounded-full object-cover border border-amber-300 shadow-sm"
+                  className="w-16 h-16 rounded-full object-contain border border-amber-400/60 shadow-sm bg-white p-1"
                 />
               </div>
               <h2 className="font-bold text-base text-obsidian-900 tracking-wider">

@@ -65,11 +65,11 @@ export function Navbar() {
           {/* Brand */}
           <div className="flex items-center gap-3 shrink-0">
             <Link href={isAdmin ? '/dashboard' : '/pos'} className="flex items-center gap-2.5 shrink-0 group">
-              <div className="w-10 h-10 rounded-xl overflow-hidden shadow-sm border border-gold-400/40 shrink-0 bg-cream-100 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-xl overflow-hidden shadow-sm border border-gold-400/50 shrink-0 bg-white flex items-center justify-center p-0.5 ring-1 ring-gold-200/60">
                 <img
-                  src="/logo.jpg"
-                  alt="Essence Logo"
-                  className="w-full h-full object-cover"
+                  src="/logo_emblem.png"
+                  alt="Essence Hair & Beauty Logo"
+                  className="w-full h-full object-contain filter drop-shadow-xs brightness-105"
                 />
               </div>
               <div className="flex flex-col justify-center">
