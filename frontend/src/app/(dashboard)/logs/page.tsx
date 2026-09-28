@@ -311,45 +311,63 @@ export default function LogsPage() {
         </div>
 
         {/* Filter Toolbar */}
-        <form onSubmit={handleSearchSubmit} className="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
-          <div className="sm:col-span-6 relative">
-            <Search className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
+        <form onSubmit={handleSearchSubmit} className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 pt-1">
+          {/* Search Input */}
+          <div className="relative flex-1">
+            <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder={`Search plain text: actions, users, descriptions, receipts...`}
-              className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-cream-300 bg-cream-50 focus:bg-white outline-none focus:border-gold-500 transition"
+              placeholder="Search plain text: actions, staff users, receipts, entities..."
+              className="w-full pl-10 pr-4 py-2 text-xs rounded-xl border border-cream-300 bg-cream-50/70 focus:bg-white outline-none focus:border-gold-500 transition placeholder:text-gray-400"
             />
           </div>
 
-          <div className="sm:col-span-2.5 flex items-center gap-1.5">
-            <span className="text-[11px] font-medium text-gray-500 whitespace-nowrap">From:</span>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="w-full px-2.5 py-2 text-xs rounded-xl border border-cream-300 bg-cream-50 focus:bg-white outline-none"
-            />
-          </div>
+          {/* Date Range & Action Buttons */}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* From Date */}
+            <div className="flex items-center gap-2 bg-cream-50 px-3 py-1.5 rounded-xl border border-cream-300">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500">From</span>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="bg-transparent text-xs text-obsidian-900 font-medium outline-none cursor-pointer"
+              />
+            </div>
 
-          <div className="sm:col-span-2.5 flex items-center gap-1.5">
-            <span className="text-[11px] font-medium text-gray-500 whitespace-nowrap">To:</span>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="w-full px-2.5 py-2 text-xs rounded-xl border border-cream-300 bg-cream-50 focus:bg-white outline-none"
-            />
-          </div>
+            {/* To Date */}
+            <div className="flex items-center gap-2 bg-cream-50 px-3 py-1.5 rounded-xl border border-cream-300">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500">To</span>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="bg-transparent text-xs text-obsidian-900 font-medium outline-none cursor-pointer"
+              />
+            </div>
 
-          <div className="sm:col-span-1 flex items-center gap-1">
+            {/* Apply Filter Button */}
             <button
               type="submit"
-              className="w-full py-2 rounded-xl gold-gradient text-white text-xs font-semibold shadow-sm hover:opacity-95 transition"
+              className="py-2 px-4 rounded-xl gold-gradient text-white font-semibold text-xs shadow-sm hover:brightness-105 transition flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
             >
-              Filter
+              <Filter className="w-3.5 h-3.5" />
+              <span>Apply Filter</span>
             </button>
+
+            {/* Reset Button */}
+            {(search || startDate || endDate) && (
+              <button
+                type="button"
+                onClick={handleResetFilters}
+                className="py-2 px-3 rounded-xl border border-cream-300 bg-white hover:bg-cream-100 text-gray-600 font-medium text-xs transition whitespace-nowrap"
+                title="Reset filters"
+              >
+                Reset
+              </button>
+            )}
           </div>
         </form>
       </div>
