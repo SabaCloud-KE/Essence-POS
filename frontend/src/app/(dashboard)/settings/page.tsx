@@ -4,34 +4,26 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { api } from '@/lib/api';
 import {
-  Settings,
-  Shield,
   ShieldCheck,
   ShieldAlert,
   KeyRound,
   QrCode,
-  Smartphone,
   CheckCircle2,
   AlertCircle,
   Loader2,
   Lock,
   Eye,
   EyeOff,
-  Radio,
-  Sliders,
-  Edit2,
   Copy,
   Check,
-  Server,
 } from 'lucide-react';
-import MpesaGatewayConfig from '@/components/settings/MpesaGatewayConfig';
 import SessionTimeoutConfig from '@/components/settings/SessionTimeoutConfig';
 import Link from 'next/link';
 
 export default function SettingsPage() {
   const { user, isAdmin, refreshProfile } = useAuth();
 
-  // Settings data from backend
+  // Settings data from backend for session timeouts
   const [settingsData, setSettingsData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -54,19 +46,13 @@ export default function SettingsPage() {
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
 
-  // Edit Setting Modal
-  const [editingSetting, setEditingSetting] = useState<{ key: string; value: string } | null>(null);
-  const [settingValue, setSettingValue] = useState('');
-  const [isSavingSetting, setIsSavingSetting] = useState(false);
-  const [settingError, setSettingError] = useState<string | null>(null);
-
   const fetchSettings = async () => {
     setIsLoading(true);
     try {
       const data = await api.getSettings();
       setSettingsData(data);
     } catch (err) {
-      console.error('Failed to fetch system settings:', err);
+      console.error('Failed to fetch settings:', err);
     } finally {
       setIsLoading(false);
     }
@@ -118,7 +104,7 @@ export default function SettingsPage() {
 
   // Handle MFA Disable
   const handleDisableMfa = async () => {
-    if (!confirm('Are you sure you want to disable Two-Factor Authentication? Your account security will be lowered.')) {
+    if (!confirm('Are you sure you want to disable Two-Factor Authentication? Your account will be less secure.')) {
       return;
     }
 
@@ -136,13 +122,12 @@ export default function SettingsPage() {
     }
   };
 
-  // Handle Copy Secret
+  // Copy secret to clipboard
   const handleCopySecret = () => {
-    if (mfaSetupData?.secret) {
-      navigator.clipboard.writeText(mfaSetupData.secret);
-      setCopiedSecret(true);
-      setTimeout(() => setCopiedSecret(false), 2500);
-    }
+    if (!mfaSetupData?.secret) return;
+    navigator.clipboard.writeText(mfaSetupData.secret);
+    setCopiedSecret(true);
+    setTimeout(() => setCopiedSecret(false), 2000);
   };
 
   // Handle Password Change
@@ -151,23 +136,20 @@ export default function SettingsPage() {
     setPasswordError(null);
     setPasswordSuccess(null);
 
-    if (newPassword.length < 8) {
-      setPasswordError('New password must be at least 8 characters long.');
-      return;
-    }
-
     if (newPassword !== confirmPassword) {
       setPasswordError('New password and confirmation do not match.');
       return;
     }
 
+    if (newPassword.length < 8) {
+      setPasswordError('Password must be at least 8 characters long.');
+      return;
+    }
+
     setIsChangingPassword(true);
     try {
-      await api.changePassword({
-        currentPassword,
-        newPassword,
-      });
-      setPasswordSuccess('Your password has been changed successfully.');
+      await api.changePassword({ currentPassword, newPassword });
+      setPasswordSuccess('Your password has been successfully updated.');
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
@@ -175,24 +157,6 @@ export default function SettingsPage() {
       setPasswordError(err.message || 'Failed to change password. Please verify current password.');
     } finally {
       setIsChangingPassword(false);
-    }
-  };
-
-  // Handle Save Setting
-  const handleSaveSetting = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingSetting) return;
-
-    setIsSavingSetting(true);
-    setSettingError(null);
-    try {
-      await api.updateSetting(editingSetting.key, settingValue);
-      setEditingSetting(null);
-      await fetchSettings();
-    } catch (err: any) {
-      setSettingError(err.message || 'Failed to update configuration parameter.');
-    } finally {
-      setIsSavingSetting(false);
     }
   };
 
@@ -223,7 +187,7 @@ export default function SettingsPage() {
         <div className="bg-amber-50/70 border border-amber-200/80 rounded-2xl p-4 text-xs text-amber-900 flex items-start gap-3">
           <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
           <div className="leading-relaxed">
-            <span className="font-bold">Staff Portal Notice:</span> System-wide M-Pesa API credentials and salon parameters are managed by Salon Administrators. You have full control over your personal staff credentials and login password below.
+            <span className="font-bold">Staff Portal Notice:</span> You have full control over your personal staff credentials and login password below.
           </div>
         </div>
 
@@ -351,12 +315,6 @@ export default function SettingsPage() {
                     {user?.role}
                   </span>
                 </div>
-                <div className="flex justify-between py-2 border-b border-cream-100">
-                  <span className="text-gray-500">Security Status</span>
-                  <span className="font-semibold text-emerald-700 flex items-center gap-1">
-                    <CheckCircle2 className="w-3.5 h-3.5" /> Active & Verified
-                  </span>
-                </div>
               </div>
             </div>
 
@@ -374,50 +332,33 @@ export default function SettingsPage() {
     );
   }
 
-  const env = settingsData?.environment;
-  const isProd = env?.isProduction;
-
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
+    <div className="space-y-6 max-w-5xl mx-auto">
       {/* Page Header */}
       <div className="bg-white p-5 rounded-2xl border border-cream-300 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-obsidian-900 flex items-center gap-2">
-            <Settings className="w-6 h-6 text-gold-600" />
-            <span>System & Security Settings</span>
+            <ShieldCheck className="w-6 h-6 text-gold-600" />
+            <span>Account & Security Settings</span>
           </h1>
           <p className="text-xs text-gray-500 mt-1">
-            Configure M-Pesa integration parameters, salon metadata, account credentials, and Two-Factor Authentication
+            Manage your administrator credentials, session timeout policies, and Two-Factor Authentication
           </p>
         </div>
 
-        {/* Live Environment Badge */}
-        <div className="flex items-center gap-2">
-          <span
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider border shadow-sm ${
-              isProd
-                ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
-                : 'bg-amber-50 text-amber-700 border-amber-300'
-            }`}
-          >
-            <span
-              className={`w-2 h-2 rounded-full ${
-                isProd ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'
-              }`}
-            />
-            {isProd ? 'Production Environment' : 'Daraja Sandbox Mode'}
-          </span>
+        <div className="text-xs text-gray-600 bg-cream-50 px-3.5 py-1.5 rounded-xl border border-cream-200 flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-emerald-500" />
+          <span>Logged in as <strong className="text-obsidian-900">{user?.name}</strong> (Administrator)</span>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Card 1: Safaricom Daraja M-Pesa Gateway */}
-        <MpesaGatewayConfig settingsData={settingsData} onRefresh={fetchSettings} />
+        {/* Card 1: Session Timeout & Inactivity Protection (Full Width) */}
+        <div className="lg:col-span-2">
+          <SessionTimeoutConfig settingsData={settingsData} onRefresh={fetchSettings} />
+        </div>
 
-        {/* Card 2: Session Timeout & Inactivity Protection */}
-        <SessionTimeoutConfig settingsData={settingsData} onRefresh={fetchSettings} />
-
-        {/* Card 3: Two-Factor Authentication (TOTP) */}
+        {/* Card 2: Two-Factor Authentication (TOTP) */}
         <div className="bg-white rounded-2xl border border-cream-300 shadow-sm p-6 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between pb-4 border-b border-cream-200 mb-4">
@@ -467,7 +408,7 @@ export default function SettingsPage() {
                 <button
                   onClick={handleStartMfaSetup}
                   disabled={isSettingUpMfa}
-                  className="w-full py-2.5 px-4 rounded-xl gold-gradient text-white font-bold text-xs shadow-sm hover:brightness-105 transition flex items-center justify-center gap-2"
+                  className="w-full py-2.5 px-4 rounded-xl gold-gradient text-white font-bold text-xs shadow-sm hover:brightness-105 transition flex items-center justify-center gap-2 cursor-pointer"
                 >
                   {isSettingUpMfa ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -537,7 +478,7 @@ export default function SettingsPage() {
                     <button
                       type="submit"
                       disabled={isConfirmingMfa || mfaCode.length !== 6}
-                      className="px-4 py-2 rounded-xl gold-gradient text-white font-bold text-xs shadow-sm hover:brightness-105 transition disabled:opacity-50 flex items-center gap-1.5"
+                      className="px-4 py-2 rounded-xl gold-gradient text-white font-bold text-xs shadow-sm hover:brightness-105 transition disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
                     >
                       {isConfirmingMfa ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
                       <span>Verify & Enable</span>
@@ -548,7 +489,7 @@ export default function SettingsPage() {
                 <button
                   type="button"
                   onClick={() => setMfaSetupData(null)}
-                  className="text-xs text-gray-500 hover:underline block text-center w-full pt-1"
+                  className="text-xs text-gray-500 hover:underline block text-center w-full pt-1 cursor-pointer"
                 >
                   Cancel setup
                 </button>
@@ -570,7 +511,7 @@ export default function SettingsPage() {
                 <button
                   onClick={handleDisableMfa}
                   disabled={isDisablingMfa}
-                  className="w-full py-2 px-4 rounded-xl border border-rose-200 text-rose-700 bg-rose-50 hover:bg-rose-100 font-semibold text-xs transition flex items-center justify-center gap-2"
+                  className="w-full py-2 px-4 rounded-xl border border-rose-200 text-rose-700 bg-rose-50 hover:bg-rose-100 font-semibold text-xs transition flex items-center justify-center gap-2 cursor-pointer"
                 >
                   {isDisablingMfa ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -585,200 +526,102 @@ export default function SettingsPage() {
         </div>
 
         {/* Card 3: Change Password */}
-        <div className="bg-white rounded-2xl border border-cream-300 shadow-sm p-6">
-          <div className="flex items-center gap-2.5 pb-4 border-b border-cream-200 mb-4">
-            <div className="w-9 h-9 rounded-xl bg-cream-100 border border-cream-200 flex items-center justify-center">
-              <KeyRound className="w-5 h-5 text-gold-600" />
-            </div>
-            <div>
-              <h2 className="text-base font-bold text-obsidian-900">Change Account Password</h2>
-              <p className="text-[11px] text-gray-500">Update your login authentication passphrase</p>
-            </div>
-          </div>
-
-          {passwordSuccess && (
-            <div className="mb-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>{passwordSuccess}</span>
-            </div>
-          )}
-
-          {passwordError && (
-            <div className="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800 flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-              <span>{passwordError}</span>
-            </div>
-          )}
-
-          <form onSubmit={handleChangePassword} className="space-y-3.5">
-            <div>
-              <label className="block text-xs font-semibold text-obsidian-900 mb-1">
-                Current Password
-              </label>
-              <div className="relative">
-                <input
-                  type={showPasswords ? 'text' : 'password'}
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  placeholder="Enter current password"
-                  required
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-cream-300 focus:outline-none focus:ring-2 focus:ring-gold-500 pr-9"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPasswords(!showPasswords)}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  {showPasswords ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-obsidian-900 mb-1">
-                New Password (minimum 8 characters)
-              </label>
-              <input
-                type={showPasswords ? 'text' : 'password'}
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="Enter new strong password"
-                minLength={8}
-                required
-                className="w-full px-3 py-2 text-xs rounded-xl border border-cream-300 focus:outline-none focus:ring-2 focus:ring-gold-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-obsidian-900 mb-1">
-                Confirm New Password
-              </label>
-              <input
-                type={showPasswords ? 'text' : 'password'}
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Re-enter new password"
-                minLength={8}
-                required
-                className="w-full px-3 py-2 text-xs rounded-xl border border-cream-300 focus:outline-none focus:ring-2 focus:ring-gold-500"
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={isChangingPassword}
-              className="w-full py-2.5 px-4 rounded-xl gold-gradient text-white font-bold text-xs shadow-sm hover:brightness-105 transition flex items-center justify-center gap-2 mt-2"
-            >
-              {isChangingPassword ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Lock className="w-4 h-4" />
-              )}
-              <span>Update Password</span>
-            </button>
-          </form>
-        </div>
-
-        {/* Card 4: Salon Business Information & Configuration */}
-        <div className="bg-white rounded-2xl border border-cream-300 shadow-sm p-6">
-          <div className="flex items-center justify-between pb-4 border-b border-cream-200 mb-4">
-            <div className="flex items-center gap-2.5">
+        <div className="bg-white rounded-2xl border border-cream-300 shadow-sm p-6 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center gap-2.5 pb-4 border-b border-cream-200 mb-4">
               <div className="w-9 h-9 rounded-xl bg-cream-100 border border-cream-200 flex items-center justify-center">
-                <Sliders className="w-5 h-5 text-gold-600" />
+                <KeyRound className="w-5 h-5 text-gold-600" />
               </div>
               <div>
-                <h2 className="text-base font-bold text-obsidian-900">Salon System Parameters</h2>
-                <p className="text-[11px] text-gray-500">Business metadata and receipt configurations</p>
+                <h2 className="text-base font-bold text-obsidian-900">Change Account Password</h2>
+                <p className="text-[11px] text-gray-500">Update your login authentication passphrase</p>
               </div>
             </div>
-          </div>
 
-          {isLoading ? (
-            <div className="py-8 flex items-center justify-center text-gray-400">
-              <Loader2 className="w-5 h-5 animate-spin" />
-            </div>
-          ) : (
-            <div className="divide-y divide-cream-100 text-xs">
-              {settingsData?.settings?.map((item: any) => (
-                <div key={item.key} className="py-2.5 flex items-center justify-between">
-                  <div>
-                    <div className="font-semibold text-obsidian-900">{item.key}</div>
-                    <div className="text-gray-500 font-mono text-[11px] mt-0.5">
-                      {item.value}
-                    </div>
-                  </div>
-
-                  {!item.isSecret && (
-                    <button
-                      onClick={() => {
-                        setEditingSetting({ key: item.key, value: item.value });
-                        setSettingValue(item.value);
-                        setSettingError(null);
-                      }}
-                      className="p-1.5 rounded-lg text-gray-500 hover:text-gold-700 hover:bg-gold-50 border border-transparent hover:border-gold-200 transition"
-                      title="Edit parameter"
-                    >
-                      <Edit2 className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Edit Setting Modal */}
-      {editingSetting && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl border border-cream-300 shadow-xl max-w-md w-full p-6 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between pb-3 border-b border-cream-200 mb-4">
-              <h3 className="text-sm font-bold text-obsidian-900">
-                Edit Setting: <span className="font-mono text-gold-700">{editingSetting.key}</span>
-              </h3>
-            </div>
-
-            {settingError && (
-              <div className="mb-4 p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800">
-                {settingError}
+            {passwordSuccess && (
+              <div className="mb-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>{passwordSuccess}</span>
               </div>
             )}
 
-            <form onSubmit={handleSaveSetting} className="space-y-4">
+            {passwordError && (
+              <div className="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                <span>{passwordError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleChangePassword} className="space-y-3.5">
               <div>
                 <label className="block text-xs font-semibold text-obsidian-900 mb-1">
-                  Parameter Value
+                  Current Password
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPasswords ? 'text' : 'password'}
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    placeholder="Enter current password"
+                    required
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-cream-300 focus:outline-none focus:ring-2 focus:ring-gold-500 pr-9 bg-cream-50 focus:bg-white"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPasswords(!showPasswords)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showPasswords ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-obsidian-900 mb-1">
+                  New Password (minimum 8 characters)
                 </label>
                 <input
-                  type="text"
-                  value={settingValue}
-                  onChange={(e) => setSettingValue(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-cream-300 focus:outline-none focus:ring-2 focus:ring-gold-500"
+                  type={showPasswords ? 'text' : 'password'}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Enter new strong password"
+                  minLength={8}
                   required
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-cream-300 focus:outline-none focus:ring-2 focus:ring-gold-500 bg-cream-50 focus:bg-white"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setEditingSetting(null)}
-                  className="px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-cream-100 rounded-xl"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSavingSetting}
-                  className="px-4 py-2 text-xs font-bold text-white gold-gradient rounded-xl shadow-sm hover:brightness-105 flex items-center gap-1.5"
-                >
-                  {isSavingSetting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                  <span>Save Changes</span>
-                </button>
+              <div>
+                <label className="block text-xs font-semibold text-obsidian-900 mb-1">
+                  Confirm New Password
+                </label>
+                <input
+                  type={showPasswords ? 'text' : 'password'}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Re-enter new password"
+                  minLength={8}
+                  required
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-cream-300 focus:outline-none focus:ring-2 focus:ring-gold-500 bg-cream-50 focus:bg-white"
+                />
               </div>
+
+              <button
+                type="submit"
+                disabled={isChangingPassword}
+                className="w-full py-2.5 px-4 rounded-xl gold-gradient text-white font-bold text-xs shadow-sm hover:brightness-105 transition flex items-center justify-center gap-2 mt-2 cursor-pointer"
+              >
+                {isChangingPassword ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Lock className="w-4 h-4" />
+                )}
+                <span>Update Password</span>
+              </button>
             </form>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
