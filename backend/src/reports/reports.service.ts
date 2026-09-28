@@ -17,12 +17,35 @@ import {
   format,
 } from 'date-fns';
 import { Response } from 'express';
+import * as path from 'path';
+import * as fs from 'fs';
 
 @Injectable()
 export class ReportsService {
   private readonly logger = new Logger(ReportsService.name);
 
   constructor(private readonly prisma: PrismaService) {}
+
+  /**
+   * Helper to locate the salon logo image across various runtime paths
+   */
+  private getLogoPath(): string | null {
+    const possiblePaths = [
+      path.join(process.cwd(), 'src', 'assets', 'logo.jpg'),
+      path.join(process.cwd(), 'assets', 'logo.jpg'),
+      path.join(process.cwd(), 'dist', 'src', 'assets', 'logo.jpg'),
+      path.join(process.cwd(), 'dist', 'assets', 'logo.jpg'),
+      path.resolve(__dirname, '../assets/logo.jpg'),
+      path.resolve(__dirname, '../../assets/logo.jpg'),
+      path.resolve(__dirname, '../../../assets/logo.jpg'),
+    ];
+    for (const p of possiblePaths) {
+      if (fs.existsSync(p)) {
+        return p;
+      }
+    }
+    return null;
+  }
 
   /**
    * Helper to parse date ranges (Today, Yesterday, This Week, This Month, Last Month, Custom)
@@ -225,10 +248,27 @@ export class ReportsService {
 
     const sheet = workbook.addWorksheet('Sales Report');
 
+    // Embed Salon Logo if available
+    const logoPath = this.getLogoPath();
+    if (logoPath) {
+      try {
+        const imageId = workbook.addImage({
+          filename: logoPath,
+          extension: 'jpeg',
+        });
+        sheet.addImage(imageId, {
+          tl: { col: 0.1, row: 0.1 },
+          ext: { width: 52, height: 52 },
+        });
+      } catch (err) {
+        this.logger.warn(`Failed to add logo to Excel: ${err.message}`);
+      }
+    }
+
     // Title & Header branding
     sheet.mergeCells('A1:H1');
     const titleCell = sheet.getCell('A1');
-    titleCell.value = 'ESSENCE HAIR & BEAUTY SALON - SALES & PAYMENT REPORT';
+    titleCell.value = '         ESSENCE HAIR & BEAUTY SALON - SALES & PAYMENT REPORT';
     titleCell.font = { name: 'Calibri', size: 16, bold: true, color: { argb: 'FFFFFFFF' } };
     titleCell.fill = {
       type: 'pattern',
@@ -314,6 +354,16 @@ export class ReportsService {
     totalRow.getCell(6).font = { bold: true };
     totalRow.getCell(6).numFmt = '#,##0.00';
 
+    // SabaCloud Footer row
+    sheet.addRow([]);
+    const footerIdx = sheet.rowCount + 1;
+    sheet.mergeCells(`A${footerIdx}:H${footerIdx}`);
+    const fCell = sheet.getCell(`A${footerIdx}`);
+    fCell.value = 'Essence Hair & Beauty Salon POS • Powered by SabaCloud (www.sabacloud.co.ke)';
+    fCell.font = { name: 'Calibri', size: 10, italic: true, bold: true, color: { argb: 'FF8A733E' } };
+    fCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    sheet.getRow(footerIdx).height = 24;
+
     // Auto-fit column widths
     sheet.columns = [
       { width: 22 }, // Receipt
@@ -372,15 +422,27 @@ export class ReportsService {
 
     doc.pipe(res);
 
+    // Embed Salon Logo if available (center on A4, page width is 595.28 pt)
+    const logoPath = this.getLogoPath();
+    if (logoPath) {
+      try {
+        doc.image(logoPath, 270, 22, { width: 55, height: 55 });
+        doc.y = 84;
+      } catch (err) {
+        this.logger.warn(`Failed to embed logo in PDF report: ${err.message}`);
+        doc.y = 36;
+      }
+    }
+
     // Header Branding
     doc
-      .fontSize(18)
+      .fontSize(16)
       .fillColor('#1A1A1A')
       .text('ESSENCE HAIR & BEAUTY SALON', { align: 'center', characterSpacing: 1.5 })
       .moveDown(0.2);
 
     doc
-      .fontSize(11)
+      .fontSize(10)
       .fillColor('#8A733E')
       .text('OFFICIAL FINANCIAL TRANSACTION & SALES REPORT', { align: 'center' })
       .moveDown(0.2);
@@ -391,7 +453,7 @@ export class ReportsService {
       .text(`Generated on: ${format(new Date(), 'dd MMMM yyyy HH:mm')} | Currency: Kenyan Shillings (KSh)`, {
         align: 'center',
       })
-      .moveDown(1.5);
+      .moveDown(1.2);
 
     // Divider
     doc.moveTo(36, doc.y).lineTo(559, doc.y).strokeColor('#C5A059').lineWidth(1.5).stroke().moveDown(1);
@@ -456,6 +518,26 @@ export class ReportsService {
         { align: 'right' },
       );
 
+    // SabaCloud Footer
+    const footerY = currentY + 36;
+    if (footerY > 770) {
+      doc.addPage();
+      doc.y = 40;
+    } else {
+      doc.y = footerY;
+    }
+    doc.moveTo(36, doc.y).lineTo(559, doc.y).strokeColor('#E0D6C3').lineWidth(0.8).stroke();
+    doc.moveDown(0.6);
+    doc
+      .fontSize(8)
+      .font('Helvetica-Bold')
+      .fillColor('#8A733E')
+      .text('Essence Hair & Beauty Salon POS • Powered by SabaCloud', { align: 'center' })
+      .font('Helvetica')
+      .fontSize(7)
+      .fillColor('#888888')
+      .text('www.sabacloud.co.ke • Enterprise Cloud & POS Solutions', { align: 'center' });
+
     doc.end();
   }
 
@@ -490,18 +572,30 @@ export class ReportsService {
 
     doc.pipe(res);
 
+    // Embed Salon Logo if available (center on 226pt thermal receipt: (226 - 46) / 2 = 90)
+    const receiptLogoPath = this.getLogoPath();
+    if (receiptLogoPath) {
+      try {
+        doc.image(receiptLogoPath, 90, 10, { width: 46, height: 46 });
+        doc.y = 60;
+      } catch (err) {
+        this.logger.warn(`Failed to embed logo in receipt PDF: ${err.message}`);
+        doc.y = 12;
+      }
+    }
+
     // Salon branding header
     doc
       .font('Helvetica-Bold')
-      .fontSize(12)
+      .fontSize(11)
       .text('ESSENCE HAIR & BEAUTY', { align: 'center' })
-      .fontSize(9)
+      .fontSize(8)
       .text('SALON & SPA', { align: 'center' })
       .font('Helvetica')
       .fontSize(7)
       .text('Corner Plaza, Suite 4B, Nairobi, Kenya', { align: 'center' })
       .text('Tel: +254 700 123 456', { align: 'center' })
-      .moveDown(0.5);
+      .moveDown(0.4);
 
     doc.text('------------------------------------------------', { align: 'center' });
 
@@ -552,6 +646,18 @@ export class ReportsService {
       .text('Thank you for choosing', { align: 'center' })
       .text('Essence Hair & Beauty Salon!', { align: 'center' })
       .text('We look forward to serving you again.', { align: 'center' });
+
+    doc.moveDown(0.6);
+    doc.text('------------------------------------------------', { align: 'center' });
+    doc
+      .font('Helvetica-Bold')
+      .fontSize(7)
+      .fillColor('#444444')
+      .text('Powered by SabaCloud', { align: 'center' })
+      .font('Helvetica')
+      .fontSize(6)
+      .fillColor('#888888')
+      .text('www.sabacloud.co.ke', { align: 'center' });
 
     doc.end();
   }

@@ -987,6 +987,13 @@ export default function PosPage() {
 
             {/* Thermal Printable Receipt Content */}
             <div className="py-4 text-center font-mono print-only" id="printable-receipt">
+              <div className="flex justify-center mb-2">
+                <img
+                  src="/logo.jpg"
+                  alt="Essence Salon"
+                  className="w-14 h-14 rounded-full object-cover border border-amber-300 shadow-sm"
+                />
+              </div>
               <h2 className="font-bold text-base text-obsidian-900 tracking-wider">
                 ESSENCE HAIR & BEAUTY
               </h2>
@@ -1085,6 +1092,17 @@ export default function PosPage() {
               <p className="text-[11px] text-gray-400 mt-1">
                 We look forward to serving you again!
               </p>
+
+              <div className="my-3 border-b border-dashed border-gray-300" />
+
+              <div className="text-center pt-1">
+                <p className="text-[10px] font-bold tracking-wider uppercase text-gray-600">
+                  Powered by SabaCloud
+                </p>
+                <p className="text-[9px] text-gray-400">
+                  www.sabacloud.co.ke
+                </p>
+              </div>
             </div>
 
             {/* Bottom New Sale Button */}

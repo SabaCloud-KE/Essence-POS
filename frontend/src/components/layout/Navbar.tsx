@@ -64,22 +64,28 @@ export function Navbar() {
         <div className="flex items-center justify-between h-16">
           {/* Brand */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl gold-gradient flex items-center justify-center shadow-md">
-              <Sparkles className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <Link href={isAdmin ? '/dashboard' : '/pos'} className="flex items-center gap-1.5">
-                <span className="font-bold text-lg tracking-tight text-obsidian-900">
-                  ESSENCE
-                </span>
-                <span className="text-xs font-semibold uppercase tracking-widest text-gold-600 bg-gold-50 px-1.5 py-0.5 rounded border border-gold-200">
-                  Salon POS
-                </span>
-              </Link>
-              <p className="text-[11px] text-gray-500 hidden sm:block">
-                Nairobi, Kenya • M-Pesa Only
-              </p>
-            </div>
+            <Link href={isAdmin ? '/dashboard' : '/pos'} className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl overflow-hidden shadow-md border border-gold-400/40 flex-shrink-0 bg-black">
+                <img
+                  src="/logo.jpg"
+                  alt="Essence Logo"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-bold text-lg tracking-tight text-obsidian-900">
+                    ESSENCE
+                  </span>
+                  <span className="text-xs font-semibold uppercase tracking-widest text-gold-600 bg-gold-50 px-1.5 py-0.5 rounded border border-gold-200">
+                    Salon POS
+                  </span>
+                </div>
+                <p className="text-[11px] text-gray-500 hidden sm:block">
+                  Nairobi, Kenya • M-Pesa Only
+                </p>
+              </div>
+            </Link>
           </div>
 
           {/* Center Navigation Links */}

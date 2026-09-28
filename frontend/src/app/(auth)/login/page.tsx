@@ -76,8 +76,12 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         {/* Salon Branding Card */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl gold-gradient shadow-lg mb-4">
-            <Sparkles className="w-8 h-8 text-white" />
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl shadow-xl mb-4 overflow-hidden border-2 border-gold-400/50 bg-black">
+            <img
+              src="/logo.jpg"
+              alt="Essence Hair & Beauty Logo"
+              className="w-full h-full object-cover"
+            />
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-obsidian-900">
             ESSENCE HAIR & BEAUTY
@@ -256,10 +260,15 @@ export default function LoginPage() {
           )}
         </div>
 
-        {/* Security Footer Notice */}
-        <div className="text-center mt-6 text-[11px] text-gray-400 flex items-center justify-center gap-1.5">
-          <Shield className="w-3.5 h-3.5 text-gold-500" />
-          <span>Protected by AES & TOTP encryption. Session timeout enforced.</span>
+        {/* Security Footer Notice & SabaCloud Branding */}
+        <div className="text-center mt-6 space-y-1">
+          <div className="text-[11px] text-gray-400 flex items-center justify-center gap-1.5">
+            <Shield className="w-3.5 h-3.5 text-gold-500" />
+            <span>Protected by AES & TOTP encryption. Session timeout enforced.</span>
+          </div>
+          <p className="text-[10px] font-semibold text-gold-600/80 tracking-wider uppercase">
+            Essence POS • Powered by SabaCloud
+          </p>
         </div>
       </div>
     </div>
