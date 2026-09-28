@@ -58,6 +58,7 @@ export default function DashboardPage() {
     { id: 'this_week', label: 'This Week' },
     { id: 'this_month', label: 'This Month' },
     { id: 'last_month', label: 'Last Month' },
+    { id: 'this_year', label: 'Yearly' },
   ];
 
   if (isLoading && !stats) {
@@ -87,6 +88,12 @@ export default function DashboardPage() {
             <span className="bg-gold-50 text-gold-700 font-bold text-xs px-2.5 py-0.5 rounded-full border border-gold-300">
               Live M-Pesa Telemetry
             </span>
+            {summary.pendingPayments > 0 && (
+              <span className="bg-amber-50 text-amber-700 font-bold text-xs px-2.5 py-0.5 rounded-full border border-amber-300 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
+                {summary.pendingPayments} Pending
+              </span>
+            )}
           </div>
           <p className="text-xs text-gray-500 mt-1">
             Real-time financial sales, transaction velocity, and staff performance
@@ -115,103 +122,55 @@ export default function DashboardPage() {
       </div>
 
       {/* KPI Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3.5">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         {/* Total Revenue */}
-        <div className="bg-white p-4 rounded-2xl border border-cream-300 shadow-sm hover:border-gold-400 transition">
+        <div className="bg-white p-5 rounded-2xl border border-cream-300 shadow-sm hover:border-gold-400 transition">
           <div className="flex items-center justify-between text-gold-600 mb-2">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500">
+            <span className="text-xs font-bold uppercase tracking-wider text-gray-500">
               Total Revenue
             </span>
-            <div className="w-8 h-8 rounded-lg bg-gold-50 flex items-center justify-center">
-              <TrendingUp className="w-4 h-4 text-gold-600" />
+            <div className="w-9 h-9 rounded-xl bg-gold-50 flex items-center justify-center">
+              <TrendingUp className="w-5 h-5 text-gold-600" />
             </div>
           </div>
-          <p className="text-xl font-bold text-obsidian-900">
+          <p className="text-2xl font-bold text-obsidian-900">
             {formatKsh(summary.totalRevenue)}
           </p>
-          <span className="text-[10px] text-emerald-600 font-semibold flex items-center gap-0.5 mt-1">
-            <ArrowUpRight className="w-3 h-3" /> M-Pesa Settled
+          <span className="text-xs text-emerald-600 font-semibold flex items-center gap-1 mt-1.5">
+            <ArrowUpRight className="w-3.5 h-3.5" /> M-Pesa Settled
           </span>
         </div>
 
-        {/* Successful Txns */}
-        <div className="bg-white p-4 rounded-2xl border border-cream-300 shadow-sm hover:border-emerald-300 transition">
-          <div className="flex items-center justify-between text-emerald-600 mb-2">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500">
-              Successful
-            </span>
-            <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-            </div>
-          </div>
-          <p className="text-xl font-bold text-obsidian-900">
-            {summary.successfulTransactions}
-          </p>
-          <span className="text-[10px] text-gray-400 mt-1 block">Completed sales</span>
-        </div>
-
-        {/* Failed Payments */}
-        <div className="bg-white p-4 rounded-2xl border border-cream-300 shadow-sm hover:border-rose-300 transition">
-          <div className="flex items-center justify-between text-rose-600 mb-2">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500">
-              Failed / Cancelled
-            </span>
-            <div className="w-8 h-8 rounded-lg bg-rose-50 flex items-center justify-center">
-              <XCircle className="w-4 h-4 text-rose-600" />
-            </div>
-          </div>
-          <p className="text-xl font-bold text-obsidian-900">
-            {summary.failedPayments}
-          </p>
-          <span className="text-[10px] text-rose-500 mt-1 block">Unsuccessful PINs</span>
-        </div>
-
-        {/* Pending Payments */}
-        <div className="bg-white p-4 rounded-2xl border border-cream-300 shadow-sm hover:border-amber-300 transition">
-          <div className="flex items-center justify-between text-amber-600 mb-2">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500">
-              Pending
-            </span>
-            <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
-              <Clock className="w-4 h-4 text-amber-600" />
-            </div>
-          </div>
-          <p className="text-xl font-bold text-obsidian-900">
-            {summary.pendingPayments}
-          </p>
-          <span className="text-[10px] text-amber-600 mt-1 block">Awaiting confirmation</span>
-        </div>
-
         {/* Average Transaction */}
-        <div className="bg-white p-4 rounded-2xl border border-cream-300 shadow-sm hover:border-purple-300 transition">
+        <div className="bg-white p-5 rounded-2xl border border-cream-300 shadow-sm hover:border-purple-300 transition">
           <div className="flex items-center justify-between text-purple-600 mb-2">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500">
+            <span className="text-xs font-bold uppercase tracking-wider text-gray-500">
               Average Sale
             </span>
-            <div className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center">
-              <CreditCard className="w-4 h-4 text-purple-600" />
+            <div className="w-9 h-9 rounded-xl bg-purple-50 flex items-center justify-center">
+              <CreditCard className="w-5 h-5 text-purple-600" />
             </div>
           </div>
-          <p className="text-xl font-bold text-obsidian-900">
+          <p className="text-2xl font-bold text-obsidian-900">
             {formatKsh(summary.averageTransaction)}
           </p>
-          <span className="text-[10px] text-gray-400 mt-1 block">Per customer ticket</span>
+          <span className="text-xs text-gray-400 mt-1.5 block">Per customer ticket</span>
         </div>
 
         {/* Services Sold */}
-        <div className="bg-white p-4 rounded-2xl border border-cream-300 shadow-sm hover:border-blue-300 transition">
+        <div className="bg-white p-5 rounded-2xl border border-cream-300 shadow-sm hover:border-blue-300 transition">
           <div className="flex items-center justify-between text-blue-600 mb-2">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500">
+            <span className="text-xs font-bold uppercase tracking-wider text-gray-500">
               Services Done
             </span>
-            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
-              <Scissors className="w-4 h-4 text-blue-600" />
+            <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center">
+              <Scissors className="w-5 h-5 text-blue-600" />
             </div>
           </div>
-          <p className="text-xl font-bold text-obsidian-900">
+          <p className="text-2xl font-bold text-obsidian-900">
             {summary.servicesSold}
           </p>
-          <span className="text-[10px] text-gray-400 mt-1 block">Client treatments</span>
+          <span className="text-xs text-gray-400 mt-1.5 block">Client treatments</span>
         </div>
       </div>
 

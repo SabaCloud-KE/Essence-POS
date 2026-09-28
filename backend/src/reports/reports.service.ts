@@ -10,6 +10,8 @@ import {
   endOfWeek,
   startOfMonth,
   endOfMonth,
+  startOfYear,
+  endOfYear,
   subDays,
   subMonths,
   format,
@@ -41,6 +43,10 @@ export class ReportsService {
         const lm = subMonths(now, 1);
         return { start: startOfMonth(lm), end: endOfMonth(lm) };
       }
+      case 'this_year':
+      case 'yearly':
+      case 'year':
+        return { start: startOfYear(now), end: endOfYear(now) };
       case 'custom':
         return {
           start: startDate ? new Date(startDate) : startOfDay(now),

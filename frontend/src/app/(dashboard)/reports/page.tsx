@@ -95,6 +95,7 @@ export default function ReportsPage() {
     { id: 'this_week', label: 'Weekly (This Week)' },
     { id: 'this_month', label: 'Monthly (This Month)' },
     { id: 'last_month', label: 'Last Month' },
+    { id: 'this_year', label: 'Yearly (This Year)' },
   ];
 
   const summary = stats?.summary || {
