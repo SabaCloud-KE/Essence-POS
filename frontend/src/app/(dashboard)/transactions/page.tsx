@@ -35,7 +35,6 @@ export default function TransactionsPage() {
 
   // Filters
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
@@ -55,7 +54,7 @@ export default function TransactionsPage() {
       const res = await api.getSales({
         page,
         limit,
-        status: statusFilter || undefined,
+        status: 'PAID',
         search: search || undefined,
         startDate: startDate || undefined,
         endDate: endDate || undefined,
@@ -72,7 +71,7 @@ export default function TransactionsPage() {
 
   useEffect(() => {
     fetchSales();
-  }, [page, statusFilter]);
+  }, [page]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -141,7 +140,7 @@ export default function TransactionsPage() {
             <span>Transaction Ledger</span>
           </h1>
           <p className="text-xs text-gray-500 mt-1">
-            Complete, immutable audit records of all salon transactions and M-Pesa payments
+            Complete, immutable audit records of all confirmed paid transactions and M-Pesa payments
           </p>
         </div>
 
@@ -152,7 +151,7 @@ export default function TransactionsPage() {
 
       {/* Filter Bar */}
       <div className="bg-white p-4 rounded-2xl border border-cream-300 shadow-sm">
-        <form onSubmit={handleSearchSubmit} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+        <form onSubmit={handleSearchSubmit} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
           {/* Search Input */}
           <div className="lg:col-span-2 relative">
             <Search className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
@@ -165,21 +164,15 @@ export default function TransactionsPage() {
             />
           </div>
 
-          {/* Status Filter */}
+          {/* Status Indicator (PAID only) */}
           <div>
-            <select
-              value={statusFilter}
-              onChange={(e) => {
-                setStatusFilter(e.target.value);
-                setPage(1);
-              }}
-              className="w-full px-3 py-2 text-xs rounded-xl border border-cream-300 outline-none bg-cream-50 focus:bg-white text-gray-700 font-medium"
-            >
-              <option value="">All Statuses</option>
-              <option value="PAID">PAID</option>
-              <option value="PENDING">PENDING</option>
-              <option value="CANCELLED">CANCELLED</option>
-            </select>
+            <div className="flex items-center justify-between px-3 py-2 text-xs rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 font-bold h-full">
+              <span className="text-gray-500 font-medium">Status:</span>
+              <span className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-emerald-700">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                PAID
+              </span>
+            </div>
           </div>
 
           {/* Date Start */}
@@ -189,6 +182,18 @@ export default function TransactionsPage() {
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
               className="w-full px-3 py-2 text-xs rounded-xl border border-cream-300 outline-none bg-cream-50 focus:bg-white text-gray-700"
+              title="Start Date"
+            />
+          </div>
+
+          {/* Date End */}
+          <div>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="w-full px-3 py-2 text-xs rounded-xl border border-cream-300 outline-none bg-cream-50 focus:bg-white text-gray-700"
+              title="End Date"
             />
           </div>
 
