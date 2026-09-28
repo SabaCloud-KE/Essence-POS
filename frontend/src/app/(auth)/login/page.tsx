@@ -76,11 +76,11 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         {/* Salon Branding Card */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-24 h-24 rounded-2xl shadow-xl mb-4 overflow-hidden border-2 border-gold-400/60 bg-white ring-2 ring-gold-200/50 p-1">
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl shadow-xl mb-4 overflow-hidden border-2 border-gold-400/50 bg-black">
             <img
               src="/logo.jpg"
               alt="Essence Hair & Beauty Logo"
-              className="w-full h-full object-contain filter brightness-105"
+              className="w-full h-full object-cover"
             />
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-obsidian-900">
