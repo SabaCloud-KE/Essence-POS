@@ -1,8 +1,11 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { AppLoggerService, LogCategory, LogLevel as AppLogLevel } from '../common/logger/app-logger.service';
 import { LogLevel } from '@prisma/client';
 import { Response } from 'express';
 import { format } from 'date-fns';
+import * as fs from 'fs';
+import * as path from 'path';
 
 export interface CreateAuditLogDto {
   userId?: number;
@@ -27,10 +30,26 @@ export interface CreateSystemLogDto {
 export class AuditService {
   private readonly logger = new Logger(AuditService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly appLogger: AppLoggerService,
+  ) {}
 
+  /**
+   * Log business audit trail to MySQL database AND write plain-text admin log
+   */
   async logAction(dto: CreateAuditLogDto) {
     try {
+      // 1. Write to server-local plain-text .log files
+      this.appLogger.info('ADMIN', dto.description, {
+        userId: dto.userId,
+        action: dto.action,
+        entity: dto.entity,
+        entityId: dto.entityId,
+        ipAddress: dto.ipAddress,
+      });
+
+      // 2. Persist to MySQL as source of truth for business audit records
       return await this.prisma.auditLog.create({
         data: {
           userId: dto.userId || null,
@@ -48,8 +67,22 @@ export class AuditService {
     }
   }
 
+  /**
+   * Log system telemetry to database AND write plain-text system log
+   */
   async logSystem(dto: CreateSystemLogDto) {
     try {
+      // 1. Write to server-local plain-text .log files
+      const cat = (['AUTH', 'PAYMENT', 'ADMIN', 'SYSTEM', 'DATABASE', 'API', 'SECURITY'].includes(dto.context)
+        ? dto.context
+        : 'SYSTEM') as LogCategory;
+      const lvl = (['INFO', 'WARN', 'ERROR', 'DEBUG'].includes(dto.level)
+        ? dto.level
+        : 'INFO') as AppLogLevel;
+
+      this.appLogger.log(lvl, cat, dto.message, dto.metadata, dto.stackTrace);
+
+      // 2. Persist to MySQL SystemLog
       return await this.prisma.systemLog.create({
         data: {
           level: dto.level,
@@ -124,22 +157,46 @@ export class AuditService {
     };
   }
 
+  /**
+   * Safely read technical system logs from server-local plain-text .log files
+   */
   async getSystemLogs(query: {
     page?: number;
     limit?: number;
-    level?: LogLevel;
+    level?: string;
     context?: string;
+    category?: string;
     search?: string;
     startDate?: string;
     endDate?: string;
+    file?: string;
   }) {
+    // Read directly from server-local plain-text .log files
+    const result = await this.appLogger.readLogs({
+      page: query.page,
+      limit: query.limit,
+      level: query.level,
+      context: query.context || query.category,
+      category: query.category || query.context,
+      search: query.search,
+      startDate: query.startDate,
+      endDate: query.endDate,
+      file: query.file,
+    });
+
+    // If server file logs exist, return them
+    if (result.data.length > 0 || result.meta.total > 0) {
+      return result;
+    }
+
+    // Fallback to MySQL SystemLog table if file log is empty (e.g. fresh container)
     const page = Math.max(1, Number(query.page) || 1);
     const limit = Math.min(100, Math.max(1, Number(query.limit) || 20));
     const skip = (page - 1) * limit;
 
     const where: any = {};
-    if (query.level) where.level = query.level;
-    if (query.context) where.context = query.context;
+    if (query.level && query.level !== 'ALL') where.level = query.level as any;
+    if (query.context && query.context !== 'ALL') where.context = query.context;
 
     if (query.startDate || query.endDate) {
       where.createdAt = {};
@@ -155,7 +212,7 @@ export class AuditService {
       ];
     }
 
-    const [total, logs] = await Promise.all([
+    const [total, dbLogs] = await Promise.all([
       this.prisma.systemLog.count({ where }),
       this.prisma.systemLog.findMany({
         where,
@@ -166,14 +223,53 @@ export class AuditService {
     ]);
 
     return {
-      data: logs,
+      data: dbLogs,
       meta: {
         page,
         limit,
         total,
-        totalPages: Math.ceil(total / limit),
+        totalPages: Math.ceil(total / limit) || 1,
       },
     };
+  }
+
+  /**
+   * Return metadata about available log files
+   */
+  getLogFiles() {
+    return {
+      files: this.appLogger.getAvailableLogFiles(),
+    };
+  }
+
+  /**
+   * Stream a plain-text log file for download with strict path-traversal prevention
+   */
+  downloadLogFile(res: Response, fileName: string) {
+    if (!fileName || typeof fileName !== 'string') {
+      throw new BadRequestException('Filename must be provided.');
+    }
+
+    // STRICT Path Traversal Validation: only allow alphanumeric, dashes, dots, ending with .log
+    const isValid = /^(\d{4}-\d{2}-\d{2}-)?(application|authentication|payments|admin|errors)\.log$/.test(
+      fileName,
+    );
+    if (!isValid || fileName.includes('..') || fileName.includes('/') || fileName.includes('\\')) {
+      throw new BadRequestException('Access denied: Invalid log filename.');
+    }
+
+    const logDir = path.resolve(process.cwd(), 'storage', 'logs');
+    const safePath = path.join(logDir, fileName);
+
+    if (!fs.existsSync(safePath)) {
+      throw new NotFoundException(`Log file "${fileName}" not found on server.`);
+    }
+
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+
+    const stream = fs.createReadStream(safePath);
+    stream.pipe(res);
   }
 
   /**

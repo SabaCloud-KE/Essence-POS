@@ -8,6 +8,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { AppLoggerService } from '../common/logger/app-logger.service';
 import { LoginDto, VerifyMfaDto, ChangePasswordDto, ConfirmMfaSetupDto } from './dto/auth.dto';
 import * as bcrypt from 'bcryptjs';
 import { authenticator } from 'otplib';
@@ -22,6 +23,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly auditService: AuditService,
+    private readonly appLogger: AppLoggerService,
   ) {}
 
   async login(dto: LoginDto, ipAddress?: string, userAgent?: string) {
@@ -30,6 +32,11 @@ export class AuthService {
     });
 
     if (!user) {
+      this.appLogger.warn('SECURITY', 'Failed login attempt - user not found', {
+        email: dto.email.toLowerCase().trim(),
+        ip: ipAddress,
+      });
+
       await this.auditService.logSystem({
         level: LogLevel.SECURITY,
         context: 'AUTH_LOGIN',
@@ -40,12 +47,24 @@ export class AuthService {
     }
 
     if (!user.isActive) {
+      this.appLogger.warn('SECURITY', 'Login attempt on deactivated account', {
+        userId: user.id,
+        email: user.email,
+        ip: ipAddress,
+      });
       throw new ForbiddenException('Your account has been deactivated. Please contact an administrator.');
     }
 
     // Check account lockout
     if (user.lockedUntil && user.lockedUntil > new Date()) {
       const remainingMinutes = Math.ceil((user.lockedUntil.getTime() - Date.now()) / (1000 * 60));
+      this.appLogger.warn('SECURITY', 'Blocked login attempt on locked account', {
+        userId: user.id,
+        email: user.email,
+        ip: ipAddress,
+        remainingMinutes,
+      });
+
       await this.auditService.logSystem({
         level: LogLevel.SECURITY,
         context: 'AUTH_LOCKOUT',
@@ -65,7 +84,20 @@ export class AuthService {
 
       if (failedLogins >= 5) {
         lockedUntil = new Date(Date.now() + 15 * 60 * 1000); // 15 min lock
-        this.logger.warn(`User ${user.email} account locked until ${lockedUntil.toISOString()}`);
+        this.appLogger.warn('SECURITY', 'Account locked out due to multiple failed login attempts', {
+          userId: user.id,
+          email: user.email,
+          failedLogins,
+          lockedUntil: lockedUntil.toISOString(),
+          ip: ipAddress,
+        });
+      } else {
+        this.appLogger.warn('SECURITY', `Failed login attempt (${failedLogins}/5)`, {
+          userId: user.id,
+          email: user.email,
+          failedLogins,
+          ip: ipAddress,
+        });
       }
 
       await this.prisma.user.update({
@@ -103,6 +135,11 @@ export class AuthService {
         { expiresIn: '5m' },
       );
 
+      this.appLogger.info('AUTH', 'MFA challenge issued awaiting OTP code', {
+        userId: user.id,
+        email: user.email,
+      });
+
       await this.auditService.logAction({
         userId: user.id,
         action: 'MFA_CHALLENGE_ISSUED',
@@ -122,6 +159,13 @@ export class AuthService {
 
     // Direct login success
     const accessToken = this.generateToken(user);
+
+    this.appLogger.info('AUTH', 'User logged in successfully', {
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+      ip: ipAddress,
+    });
 
     await this.auditService.logAction({
       userId: user.id,
@@ -154,10 +198,12 @@ export class AuthService {
     try {
       payload = this.jwtService.verify(dto.mfaToken);
     } catch {
+      this.appLogger.warn('SECURITY', 'MFA token expired or invalid', { ip: ipAddress });
       throw new UnauthorizedException('MFA session expired or invalid. Please log in again.');
     }
 
     if (payload.type !== 'mfa_pending') {
+      this.appLogger.warn('SECURITY', 'Invalid MFA token payload type', { ip: ipAddress });
       throw new UnauthorizedException('Invalid MFA token.');
     }
 
@@ -166,6 +212,10 @@ export class AuthService {
     });
 
     if (!user || !user.isActive || !user.mfaSecret) {
+      this.appLogger.warn('SECURITY', 'Invalid user state for MFA verification', {
+        userId: payload.sub,
+        ip: ipAddress,
+      });
       throw new UnauthorizedException('Invalid user state for MFA verification.');
     }
 
@@ -175,6 +225,12 @@ export class AuthService {
     });
 
     if (!isValid) {
+      this.appLogger.warn('SECURITY', 'Invalid MFA OTP code supplied', {
+        userId: user.id,
+        email: user.email,
+        ip: ipAddress,
+      });
+
       await this.auditService.logAction({
         userId: user.id,
         action: 'MFA_FAILED',
@@ -188,6 +244,13 @@ export class AuthService {
     }
 
     const accessToken = this.generateToken(user);
+
+    this.appLogger.info('AUTH', 'MFA verified successfully; user session started', {
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+      ip: ipAddress,
+    });
 
     await this.auditService.logAction({
       userId: user.id,
@@ -240,6 +303,10 @@ export class AuthService {
     });
 
     if (!isValid) {
+      this.appLogger.warn('SECURITY', 'Failed MFA setup confirmation - code mismatch', {
+        userId,
+        ip: ipAddress,
+      });
       throw new BadRequestException('Invalid authentication code. Could not verify authenticator app.');
     }
 
@@ -249,6 +316,11 @@ export class AuthService {
         mfaEnabled: true,
         mfaSecret: dto.secret,
       },
+    });
+
+    this.appLogger.info('AUTH', 'User enabled Multi-Factor Authentication', {
+      userId,
+      ip: ipAddress,
     });
 
     await this.auditService.logAction({
@@ -272,6 +344,11 @@ export class AuthService {
       },
     });
 
+    this.appLogger.warn('SECURITY', 'User disabled Multi-Factor Authentication', {
+      userId,
+      ip: ipAddress,
+    });
+
     await this.auditService.logAction({
       userId,
       action: 'MFA_DISABLED',
@@ -290,6 +367,10 @@ export class AuthService {
 
     const isCurrentValid = await bcrypt.compare(dto.currentPassword, user.passwordHash);
     if (!isCurrentValid) {
+      this.appLogger.warn('SECURITY', 'Password change failed: current password incorrect', {
+        userId,
+        ip: ipAddress,
+      });
       throw new BadRequestException('Current password does not match.');
     }
 
@@ -300,6 +381,11 @@ export class AuthService {
         passwordHash: newHash,
         mustChangePassword: false,
       },
+    });
+
+    this.appLogger.info('AUTH', 'User password changed successfully', {
+      userId,
+      ip: ipAddress,
     });
 
     await this.auditService.logAction({

@@ -20,11 +20,16 @@ import { Response } from 'express';
 import * as path from 'path';
 import * as fs from 'fs';
 
+import { AppLoggerService } from '../common/logger/app-logger.service';
+
 @Injectable()
 export class ReportsService {
   private readonly logger = new Logger(ReportsService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly appLogger: AppLoggerService,
+  ) {}
 
   /**
    * Helper to locate the salon logo image across various runtime paths
@@ -242,6 +247,13 @@ export class ReportsService {
       },
     });
 
+    this.appLogger.info('ADMIN', 'Sales report exported to Excel (.xlsx)', {
+      recordsCount: sales.length,
+      startDate: query.startDate,
+      endDate: query.endDate,
+      status: query.status,
+    });
+
     const workbook = new ExcelJS.Workbook();
     workbook.creator = 'Essence Hair & Beauty Salon';
     workbook.created = new Date();
@@ -410,6 +422,13 @@ export class ReportsService {
         payments: true,
         user: { select: { name: true } },
       },
+    });
+
+    this.appLogger.info('ADMIN', 'Sales report exported to PDF document', {
+      recordsCount: sales.length,
+      startDate: query.startDate,
+      endDate: query.endDate,
+      status: query.status,
     });
 
     const doc = new PDFDocument({ margin: 36, size: 'A4' });

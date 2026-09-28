@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { MpesaCallbackService } from './mpesa-callback.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { AppLoggerService } from '../common/logger/app-logger.service';
 import { EventsGateway } from '../events/events.gateway';
 import { PaymentStatus, SaleStatus } from '@prisma/client';
 
@@ -9,6 +10,7 @@ describe('MpesaCallbackService', () => {
   let service: MpesaCallbackService;
   let prisma: any;
   let eventsGateway: any;
+  let appLogger: any;
 
   beforeEach(async () => {
     prisma = {
@@ -32,11 +34,20 @@ describe('MpesaCallbackService', () => {
       emitPaymentUpdate: jest.fn(),
     };
 
+    appLogger = {
+      log: jest.fn(),
+      info: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn(),
+      debug: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         MpesaCallbackService,
         { provide: PrismaService, useValue: prisma },
         { provide: AuditService, useValue: auditService },
+        { provide: AppLoggerService, useValue: appLogger },
         { provide: EventsGateway, useValue: eventsGateway },
       ],
     }).compile();

@@ -2,10 +2,12 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import { AppLoggerService } from './common/logger/app-logger.service';
 
 async function bootstrap() {
   const logger = new Logger('EssencePOS-Bootstrap');
   const app = await NestFactory.create(AppModule);
+  const appLogger = app.get(AppLoggerService);
 
   app.enableCors({
     origin: (origin, callback) => {
@@ -34,7 +36,7 @@ async function bootstrap() {
     }),
   );
 
-  app.useGlobalFilters(new HttpExceptionFilter());
+  app.useGlobalFilters(new HttpExceptionFilter(appLogger));
 
   const port = parseInt(process.env.PORT || '4000', 10);
   await app.listen(port, '0.0.0.0');
@@ -44,6 +46,12 @@ async function bootstrap() {
   logger.log(`🚀 Server listening on: http://localhost:${port}/api`);
   logger.log(`💳 Safaricom Daraja Mode: ${process.env.MPESA_ENVIRONMENT || 'sandbox'}`);
   logger.log(`=======================================================`);
+
+  appLogger.info('SYSTEM', `Essence POS Backend started listening on port ${port}`, {
+    port,
+    environment: process.env.NODE_ENV || 'development',
+    mpesaMode: process.env.MPESA_ENVIRONMENT || 'sandbox',
+  });
 }
 
 bootstrap();

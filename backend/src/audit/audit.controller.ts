@@ -3,7 +3,7 @@ import { AuditService } from './audit.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
-import { UserRole, LogLevel } from '@prisma/client';
+import { UserRole } from '@prisma/client';
 import { Response } from 'express';
 
 @Controller('logs')
@@ -49,20 +49,37 @@ export class AuditController {
   async getSystemLogs(
     @Query('page') page?: number,
     @Query('limit') limit?: number,
-    @Query('level') level?: LogLevel,
+    @Query('level') level?: string,
     @Query('context') context?: string,
+    @Query('category') category?: string,
     @Query('search') search?: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
+    @Query('file') file?: string,
   ) {
     return this.auditService.getSystemLogs({
       page,
       limit,
       level,
       context,
+      category,
       search,
       startDate,
       endDate,
+      file,
     });
+  }
+
+  @Get('files')
+  async getLogFiles() {
+    return this.auditService.getLogFiles();
+  }
+
+  @Get('download-file')
+  async downloadLogFile(
+    @Res() res: Response,
+    @Query('file') fileName: string,
+  ) {
+    return this.auditService.downloadLogFile(res, fileName);
   }
 }

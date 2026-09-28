@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { AppLoggerService, maskPhoneNumber } from '../common/logger/app-logger.service';
 import { CreateUserDto, UpdateUserDto, ResetUserPasswordDto } from './dto/users.dto';
 import * as bcrypt from 'bcryptjs';
 import { UserRole } from '@prisma/client';
@@ -37,6 +38,7 @@ export class UsersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
+    private readonly appLogger: AppLoggerService,
   ) {}
 
   async findAll(query: { page?: number; limit?: number; role?: UserRole; search?: string }) {
@@ -73,7 +75,6 @@ export class UsersService {
           isActive: true,
           lastLoginAt: true,
           createdAt: true,
-          updatedAt: true,
         },
       }),
     ]);
@@ -143,6 +144,15 @@ export class UsersService {
       },
     });
 
+    this.appLogger.info('ADMIN', `User account created: ${user.name}`, {
+      adminId: actorId,
+      targetUserId: user.id,
+      email: user.email,
+      role: user.role,
+      phone: maskPhoneNumber(user.phone),
+      ip: ipAddress,
+    });
+
     await this.auditService.logAction({
       userId: actorId,
       action: 'USER_CREATED',
@@ -183,6 +193,14 @@ export class UsersService {
       },
     });
 
+    this.appLogger.info('ADMIN', `User account updated: ${updated.name}`, {
+      adminId: actorId,
+      targetUserId: id,
+      role: updated.role,
+      isActive: updated.isActive,
+      ip: ipAddress,
+    });
+
     await this.auditService.logAction({
       userId: actorId,
       action: 'USER_UPDATED',
@@ -208,6 +226,12 @@ export class UsersService {
         failedLogins: 0,
         lockedUntil: null,
       },
+    });
+
+    this.appLogger.info('ADMIN', `Administrator reset password for user: ${user.name}`, {
+      adminId: actorId,
+      targetUserId: id,
+      ip: ipAddress,
     });
 
     await this.auditService.logAction({

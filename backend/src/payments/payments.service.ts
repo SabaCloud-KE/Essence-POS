@@ -6,10 +6,11 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { AppLoggerService, maskPhoneNumber } from '../common/logger/app-logger.service';
 import { MpesaService } from './mpesa.service';
 import { EventsGateway } from '../events/events.gateway';
 import { InitiateStkPushDto } from './dto/payment.dto';
-import { PaymentMethod, PaymentStatus, SaleStatus, LogLevel, Prisma } from '@prisma/client';
+import { PaymentMethod, PaymentStatus, SaleStatus } from '@prisma/client';
 
 @Injectable()
 export class PaymentsService {
@@ -18,6 +19,7 @@ export class PaymentsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
+    private readonly appLogger: AppLoggerService,
     private readonly mpesaService: MpesaService,
     private readonly eventsGateway: EventsGateway,
   ) {}
@@ -51,13 +53,25 @@ export class PaymentsService {
     // Format and validate phone
     const formattedPhone = this.mpesaService.formatPhoneNumber(dto.phoneNumber);
 
-    // Daraja STK Push call
-    const stkResponse = await this.mpesaService.sendStkPush({
-      phoneNumber: formattedPhone,
-      amount: Number(sale.totalAmount),
-      accountReference: sale.receiptNumber,
-      transactionDesc: `Sale ${sale.receiptNumber}`,
-    });
+    let stkResponse: any;
+    try {
+      // Daraja STK Push call
+      stkResponse = await this.mpesaService.sendStkPush({
+        phoneNumber: formattedPhone,
+        amount: Number(sale.totalAmount),
+        accountReference: sale.receiptNumber,
+        transactionDesc: `Sale ${sale.receiptNumber}`,
+      });
+    } catch (err: any) {
+      this.appLogger.error('PAYMENT', 'M-Pesa STK Push initiation failed', {
+        saleId: sale.id,
+        receiptNumber: sale.receiptNumber,
+        amount: Number(sale.totalAmount),
+        phone: maskPhoneNumber(formattedPhone),
+        error: err.message,
+      });
+      throw err;
+    }
 
     // Create Payment record with PENDING status
     const payment = await this.prisma.payment.create({
@@ -80,12 +94,21 @@ export class PaymentsService {
       });
     }
 
+    this.appLogger.info('PAYMENT', 'M-Pesa STK Push initiated successfully', {
+      saleId: sale.id,
+      receiptNumber: sale.receiptNumber,
+      amount: Number(sale.totalAmount),
+      phone: maskPhoneNumber(formattedPhone),
+      checkoutRequestId: stkResponse.CheckoutRequestID,
+      isSimulation: stkResponse.isSimulation || false,
+    });
+
     await this.auditService.logAction({
       userId,
       action: 'MPESA_STK_INITIATED',
       entity: 'Payment',
       entityId: String(payment.id),
-      description: `Initiated M-Pesa STK Push for KSh ${sale.totalAmount} to phone ${formattedPhone} (Checkout: ${stkResponse.CheckoutRequestID})`,
+      description: `Initiated M-Pesa STK Push for KSh ${sale.totalAmount} to phone ${maskPhoneNumber(formattedPhone)} (Checkout: ${stkResponse.CheckoutRequestID})`,
       metadata: {
         saleId: sale.id,
         receiptNumber: sale.receiptNumber,
@@ -194,6 +217,14 @@ export class PaymentsService {
       });
 
       return p;
+    });
+
+    this.appLogger.info('PAYMENT', 'Payment refunded / reversed by administrator', {
+      adminId,
+      paymentId,
+      receiptNumber: payment.mpesaReceiptNumber,
+      amount: Number(payment.amount),
+      reason,
     });
 
     await this.auditService.logAction({

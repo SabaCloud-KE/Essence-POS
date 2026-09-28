@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { AppLoggerService } from '../common/logger/app-logger.service';
 import { CreateServiceDto, UpdateServiceDto } from './dto/services.dto';
 import { Prisma } from '@prisma/client';
 
@@ -13,6 +14,7 @@ export class ServicesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
+    private readonly appLogger: AppLoggerService,
   ) {}
 
   async findAll(options?: {
@@ -81,6 +83,15 @@ export class ServicesService {
       },
     });
 
+    this.appLogger.info('ADMIN', `Service created: ${service.name}`, {
+      adminId: userId,
+      serviceId: service.id,
+      name: service.name,
+      price: Number(service.price),
+      category: service.category,
+      ip: ipAddress,
+    });
+
     await this.auditService.logAction({
       userId,
       action: 'SERVICE_CREATED',
@@ -112,6 +123,24 @@ export class ServicesService {
       data,
     });
 
+    const isPriceChanged = dto.price !== undefined && Number(existing.price) !== Number(updated.price);
+
+    this.appLogger.info(
+      'ADMIN',
+      isPriceChanged
+        ? `Service price updated: ${updated.name}`
+        : `Service updated: ${updated.name}`,
+      {
+        adminId: userId,
+        serviceId: id,
+        name: updated.name,
+        oldPrice: Number(existing.price),
+        newPrice: Number(updated.price),
+        isActive: updated.isActive,
+        ip: ipAddress,
+      },
+    );
+
     await this.auditService.logAction({
       userId,
       action: 'SERVICE_UPDATED',
@@ -134,6 +163,17 @@ export class ServicesService {
       where: { id },
       data: { isActive: !service.isActive },
     });
+
+    this.appLogger.info(
+      'ADMIN',
+      `${updated.isActive ? 'Service activated' : 'Service deactivated'}: ${updated.name}`,
+      {
+        adminId: userId,
+        serviceId: id,
+        isActive: updated.isActive,
+        ip: ipAddress,
+      },
+    );
 
     await this.auditService.logAction({
       userId,

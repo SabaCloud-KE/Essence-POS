@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { AppLoggerService, maskPhoneNumber } from '../common/logger/app-logger.service';
 import { EventsGateway } from '../events/events.gateway';
 import { PaymentStatus, SaleStatus, LogLevel } from '@prisma/client';
 
@@ -28,6 +29,7 @@ export class MpesaCallbackService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
+    private readonly appLogger: AppLoggerService,
     private readonly eventsGateway: EventsGateway,
   ) {}
 
@@ -39,6 +41,7 @@ export class MpesaCallbackService {
 
     const stkCallback = payload?.Body?.stkCallback;
     if (!stkCallback) {
+      this.appLogger.error('PAYMENT', 'Invalid callback payload: missing Body.stkCallback');
       this.logger.error('Invalid callback payload: missing Body.stkCallback', payload);
       return { ResultCode: 1, ResultDesc: 'Invalid payload structure' };
     }
@@ -51,6 +54,13 @@ export class MpesaCallbackService {
       CallbackMetadata,
     } = stkCallback;
 
+    this.appLogger.info('PAYMENT', 'M-Pesa callback received from Safaricom', {
+      checkoutRequestId: CheckoutRequestID,
+      merchantRequestId: MerchantRequestID,
+      resultCode: ResultCode,
+      resultDesc: ResultDesc,
+    });
+
     // 1. Locate the internal payment record
     const existingPayment = await this.prisma.payment.findUnique({
       where: { checkoutRequestId: CheckoutRequestID },
@@ -58,18 +68,26 @@ export class MpesaCallbackService {
     });
 
     if (!existingPayment) {
+      this.appLogger.warn('PAYMENT', 'Callback received for unrecognized CheckoutRequestID', {
+        checkoutRequestId: CheckoutRequestID,
+      });
       this.logger.warn(`No payment found matching CheckoutRequestID: ${CheckoutRequestID}`);
+
       await this.auditService.logSystem({
         level: LogLevel.WARNING,
         context: 'MPESA_CALLBACK',
         message: `Callback received for unrecognized CheckoutRequestID: ${CheckoutRequestID}`,
-        metadata: { payload },
+        metadata: { checkoutRequestId: CheckoutRequestID, resultCode: ResultCode },
       });
       return { ResultCode: 0, ResultDesc: 'Accepted but unrecognized' };
     }
 
     // 2. Idempotency check: If already finalized, do not duplicate
     if (existingPayment.status === PaymentStatus.PAID) {
+      this.appLogger.warn('PAYMENT', 'Duplicate M-Pesa payment callback received and skipped', {
+        checkoutRequestId: CheckoutRequestID,
+        saleId: existingPayment.saleId,
+      });
       this.logger.log(
         `Idempotency triggered: Payment for ${CheckoutRequestID} already finalized as PAID. Skipping duplicate processing.`,
       );
@@ -126,6 +144,10 @@ export class MpesaCallbackService {
           },
         });
         if (receiptExists) {
+          this.appLogger.error('PAYMENT', 'Duplicate M-Pesa receipt number collision detected', {
+            mpesaReceiptNumber,
+            existingPaymentId: existingPayment.id,
+          });
           this.logger.error(`Duplicate M-Pesa Receipt Number detected: ${mpesaReceiptNumber}`);
           throw new Error(`Receipt number ${mpesaReceiptNumber} is already associated with another transaction.`);
         }
@@ -158,8 +180,16 @@ export class MpesaCallbackService {
       return { payment: updatedPayment, sale: updatedSale };
     });
 
-    // 5. Create audit/system logs
+    // 5. Create audit/system and plain-text logs
     if (paymentStatus === PaymentStatus.PAID) {
+      this.appLogger.info('PAYMENT', 'M-Pesa payment confirmed successfully', {
+        saleId: result.sale.id,
+        receiptNumber: result.sale.receiptNumber,
+        mpesaReceiptNumber: result.payment.mpesaReceiptNumber,
+        amount: Number(result.payment.amount),
+        phone: maskPhoneNumber(paidPhone),
+      });
+
       await this.auditService.logAction({
         action: 'PAYMENT_SUCCESS',
         entity: 'Payment',
@@ -173,6 +203,13 @@ export class MpesaCallbackService {
         },
       });
     } else {
+      this.appLogger.warn('PAYMENT', `M-Pesa payment failed or rejected (${paymentStatus})`, {
+        saleId: existingPayment.saleId,
+        checkoutRequestId: CheckoutRequestID,
+        resultCode: ResultCode,
+        resultDesc: ResultDesc,
+      });
+
       await this.auditService.logSystem({
         level: LogLevel.PAYMENT,
         context: 'MPESA_CALLBACK',
