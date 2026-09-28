@@ -19,17 +19,14 @@ import {
   Radio,
   Clock,
   ShieldCheck,
-  KeyRound,
   User as UserIcon,
 } from 'lucide-react';
-import { ChangePasswordModal } from '@/components/auth/ChangePasswordModal';
 
 export function Navbar() {
   const pathname = usePathname();
   const { user, isAdmin, logout } = useAuth();
   const { isConnected } = useSocket();
   const [timeStr, setTimeStr] = useState('');
-  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
 
   useEffect(() => {
     const updateTime = () => {
@@ -161,15 +158,6 @@ export function Navbar() {
                 </div>
               </Link>
 
-              <button
-                type="button"
-                onClick={() => setIsChangePasswordOpen(true)}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-gray-700 hover:text-gold-700 bg-cream-100 hover:bg-gold-50 border border-cream-300 hover:border-gold-300 rounded-lg transition font-medium"
-                title="Change Password"
-              >
-                <KeyRound className="w-3.5 h-3.5 text-gold-600" />
-                <span className="hidden sm:inline">Password</span>
-              </button>
 
               <button
                 onClick={() => logout()}
@@ -220,24 +208,9 @@ export function Navbar() {
               <UserIcon className="w-3 h-3 text-gold-600" />
               <span>Profile</span>
             </Link>
-
-            <button
-              type="button"
-              onClick={() => setIsChangePasswordOpen(true)}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-md text-xs whitespace-nowrap text-gold-700 bg-gold-50 border border-gold-200 font-medium hover:bg-gold-100"
-              title="Change Password"
-            >
-              <KeyRound className="w-3 h-3 text-gold-600" />
-              <span>Password</span>
-            </button>
           </div>
         </div>
       </div>
-
-      <ChangePasswordModal
-        isOpen={isChangePasswordOpen}
-        onClose={() => setIsChangePasswordOpen(false)}
-      />
     </header>
   );
 }

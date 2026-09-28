@@ -29,11 +29,9 @@ import {
   ArrowLeft,
   X,
   Settings,
-  KeyRound,
 } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
-import { ChangePasswordModal } from '@/components/auth/ChangePasswordModal';
 
 interface ServiceItem {
   id: number;
@@ -83,7 +81,6 @@ export default function PosPage() {
   const [isSimulatorMode, setIsSimulatorMode] = useState(false);
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
-  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
 
   // Load active services and categories on mount
   useEffect(() => {
@@ -401,17 +398,6 @@ export default function PosPage() {
                     <TableIcon className="w-4 h-4" />
                   </button>
                 </div>
-
-                {/* Staff Change Password Action */}
-                <button
-                  type="button"
-                  onClick={() => setIsPasswordModalOpen(true)}
-                  className="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 bg-cream-100 hover:bg-gold-50 text-gray-700 hover:text-gold-700 border border-cream-300 hover:border-gold-300 rounded-xl text-xs font-semibold transition shrink-0"
-                  title="Change your login password"
-                >
-                  <KeyRound className="w-3.5 h-3.5 text-gold-600" />
-                  <span className="hidden sm:inline">Password</span>
-                </button>
               </div>
             </div>
 
@@ -1116,12 +1102,6 @@ export default function PosPage() {
           </div>
         </div>
       )}
-
-      {/* Staff Password Change Modal */}
-      <ChangePasswordModal
-        isOpen={isPasswordModalOpen}
-        onClose={() => setIsPasswordModalOpen(false)}
-      />
     </div>
   );
 }
