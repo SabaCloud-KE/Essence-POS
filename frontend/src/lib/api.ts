@@ -173,13 +173,41 @@ export const api = {
     }),
 
   // Logs
-  getAuditLogs: (params?: any) => {
-    const q = new URLSearchParams(params);
-    return apiRequest(`/logs/audit?${q.toString()}`);
+  getAuditLogs: (params?: { page?: number; limit?: number; search?: string; startDate?: string; endDate?: string }) => {
+    const q = new URLSearchParams();
+    if (params?.page) q.append('page', String(params.page));
+    if (params?.limit) q.append('limit', String(params.limit));
+    if (params?.search && params.search.trim()) q.append('search', params.search.trim());
+    if (params?.startDate) q.append('startDate', params.startDate);
+    if (params?.endDate) q.append('endDate', params.endDate);
+    const qs = q.toString();
+    return apiRequest(`/logs/audit${qs ? `?${qs}` : ''}`);
   },
-  getSystemLogs: (params?: any) => {
-    const q = new URLSearchParams(params);
-    return apiRequest(`/logs/system?${q.toString()}`);
+  getSystemLogs: (params?: { page?: number; limit?: number; level?: string; search?: string; startDate?: string; endDate?: string }) => {
+    const q = new URLSearchParams();
+    if (params?.page) q.append('page', String(params.page));
+    if (params?.limit) q.append('limit', String(params.limit));
+    if (params?.level) q.append('level', params.level);
+    if (params?.search && params.search.trim()) q.append('search', params.search.trim());
+    if (params?.startDate) q.append('startDate', params.startDate);
+    if (params?.endDate) q.append('endDate', params.endDate);
+    const qs = q.toString();
+    return apiRequest(`/logs/system${qs ? `?${qs}` : ''}`);
+  },
+  downloadAuditLogsTxt: async (search?: string, startDate?: string, endDate?: string): Promise<Blob> => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('essence_pos_token') : null;
+    const q = new URLSearchParams();
+    if (search && search.trim()) q.append('search', search.trim());
+    if (startDate) q.append('startDate', startDate);
+    if (endDate) q.append('endDate', endDate);
+    const qs = q.toString();
+    const res = await fetch(`${API_BASE}/logs/audit/export-txt${qs ? `?${qs}` : ''}`, {
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
+    if (!res.ok) throw new Error('Failed to export audit logs text');
+    return res.blob();
   },
 
   // Settings

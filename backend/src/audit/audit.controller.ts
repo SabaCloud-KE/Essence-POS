@@ -1,15 +1,26 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards, Res } from '@nestjs/common';
 import { AuditService } from './audit.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { UserRole, LogLevel } from '@prisma/client';
+import { Response } from 'express';
 
 @Controller('logs')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(UserRole.ADMIN)
 export class AuditController {
   constructor(private readonly auditService: AuditService) {}
+
+  @Get('audit/export-txt')
+  async exportAuditLogsText(
+    @Res() res: Response,
+    @Query('search') search?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return this.auditService.exportAuditLogsText(res, { search, startDate, endDate });
+  }
 
   @Get('audit')
   async getAuditLogs(

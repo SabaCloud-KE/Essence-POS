@@ -1,6 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { LogLevel } from '@prisma/client';
+import { Response } from 'express';
+import { format } from 'date-fns';
 
 export interface CreateAuditLogDto {
   userId?: number;
@@ -87,11 +89,12 @@ export class AuditService {
       if (query.endDate) where.createdAt.lte = new Date(query.endDate);
     }
 
-    if (query.search) {
+    if (query.search && query.search.trim() && query.search !== 'undefined') {
+      const s = query.search.trim();
       where.OR = [
-        { description: { contains: query.search } },
-        { action: { contains: query.search } },
-        { entity: { contains: query.search } },
+        { description: { contains: s, mode: 'insensitive' } },
+        { action: { contains: s, mode: 'insensitive' } },
+        { entity: { contains: s, mode: 'insensitive' } },
       ];
     }
 
@@ -144,10 +147,11 @@ export class AuditService {
       if (query.endDate) where.createdAt.lte = new Date(query.endDate);
     }
 
-    if (query.search) {
+    if (query.search && query.search.trim() && query.search !== 'undefined') {
+      const s = query.search.trim();
       where.OR = [
-        { message: { contains: query.search } },
-        { context: { contains: query.search } },
+        { message: { contains: s, mode: 'insensitive' } },
+        { context: { contains: s, mode: 'insensitive' } },
       ];
     }
 
@@ -170,5 +174,74 @@ export class AuditService {
         totalPages: Math.ceil(total / limit),
       },
     };
+  }
+
+  /**
+   * Export audit trail directly as formatted plain text (.txt)
+   */
+  async exportAuditLogsText(
+    res: Response,
+    query: { search?: string; startDate?: string; endDate?: string },
+  ) {
+    const where: any = {};
+    if (query.startDate || query.endDate) {
+      where.createdAt = {};
+      if (query.startDate) where.createdAt.gte = new Date(query.startDate);
+      if (query.endDate) where.createdAt.lte = new Date(query.endDate);
+    }
+
+    if (query.search && query.search.trim() && query.search !== 'undefined') {
+      const s = query.search.trim();
+      where.OR = [
+        { description: { contains: s, mode: 'insensitive' } },
+        { action: { contains: s, mode: 'insensitive' } },
+        { entity: { contains: s, mode: 'insensitive' } },
+      ];
+    }
+
+    const logs = await this.prisma.auditLog.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      take: 1000,
+      include: {
+        user: { select: { name: true, role: true, email: true } },
+      },
+    });
+
+    let output = '';
+    output += '================================================================================\n';
+    output += 'ESSENCE HAIR & BEAUTY SALON - OFFICIAL AUDIT TRAIL LOG (PLAIN TEXT)\n';
+    output += `Generated: ${format(new Date(), 'yyyy-MM-dd HH:mm:ss')} (Africa/Nairobi) | Records: ${logs.length}\n`;
+    output += 'Powered by SabaCloud (www.sabacloud.co.ke)\n';
+    output += '================================================================================\n\n';
+
+    for (const log of logs) {
+      const time = format(new Date(log.createdAt), 'yyyy-MM-dd HH:mm:ss');
+      const userName = log.user ? `${log.user.name} (${log.user.role} - ${log.user.email})` : 'System / Automated';
+      output += `[${time}] [${log.action}] [User: ${userName}]\n`;
+      output += `  Entity: ${log.entity}${log.entityId ? ` (#${log.entityId})` : ''}\n`;
+      output += `  Description: ${log.description}\n`;
+      if (log.ipAddress) output += `  IP Address: ${log.ipAddress}\n`;
+      if (log.userAgent) output += `  User Agent: ${log.userAgent}\n`;
+      if (log.metadata) {
+        try {
+          const parsed = JSON.parse(log.metadata);
+          const metaLines = Object.entries(parsed)
+            .map(([k, v]) => `    • ${k}: ${typeof v === 'object' ? JSON.stringify(v) : v}`)
+            .join('\n');
+          output += `  Metadata:\n${metaLines}\n`;
+        } catch {
+          output += `  Metadata: ${log.metadata}\n`;
+        }
+      }
+      output += '--------------------------------------------------------------------------------\n';
+    }
+
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename=Essence_Audit_Logs_${format(new Date(), 'yyyyMMdd_HHmm')}.txt`,
+    );
+    res.send(output);
   }
 }

@@ -33,8 +33,9 @@ out/
 !*/.env.example
 
 # 4. Logs & Diagnostics
-logs/
+/logs/
 *.log
+!frontend/src/app/(dashboard)/logs/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
